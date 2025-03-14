@@ -34,14 +34,14 @@ export const Header: React.FC<Props> = ({ className }) => {
   return (
     <header
       className={cn(
-        "flex h-16 shrink-0 items-center gap-2 border-b justify-between px-3",
+        "sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b justify-between px-3 bg-background",
         className
       )}
     >
       <div className="flex items-center gap-2">
         <SidebarTrigger />
         <Separator orientation="vertical" className="mr-2 h-4" />
-        <Breadcrumb>
+        <Breadcrumb className="hidden md:block">
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink href="/">Главная</BreadcrumbLink>

@@ -23,6 +23,7 @@ export const AlertDialogDemo: React.FC<Props> = ({ id, deleteItemProps }) => {
       <AlertDialogTrigger asChild>
         <Button variant="destructive" className="ml-3">
           <Trash2 />
+          <span className="sr-only">Удалить транспортное средство</span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
