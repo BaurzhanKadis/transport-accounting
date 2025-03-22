@@ -39,7 +39,7 @@ export default function CreateNewTransport() {
     []
   );
 
-  // console.log(generalKM, "generalKM");
+  // console.log(generalKM, "generalKM")
 
   return (
     <div className="">

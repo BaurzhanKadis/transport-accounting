@@ -5,15 +5,6 @@ import "./globals.css";
 import React from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "react-hot-toast";
-// import {
-//   Breadcrumb,
-//   BreadcrumbItem,
-//   BreadcrumbLink,
-//   BreadcrumbList,
-//   BreadcrumbPage,
-//   BreadcrumbSeparator,
-// } from "@/components/ui/breadcrumb";
-// import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Header } from "@/components/shared";
 

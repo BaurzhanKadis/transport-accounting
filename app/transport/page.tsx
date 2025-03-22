@@ -19,9 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// const TO1_INTERVAL = 5000; // Интервал ТО1 в километрах
-// const TO2_INTERVAL = 10000; // Интервал ТО2 в километрах
-
 export default function TransportPage() {
   const [allTransports, setAllTransports] = React.useState<Transport[]>([]);
   const [allCategories, setAllCategories] = React.useState<Category[]>([]);

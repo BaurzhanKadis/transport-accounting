@@ -26,8 +26,8 @@ model User {
 model Category {
     id Int @id @default(autoincrement())
     name String @unique
-    distanceTO1 Int?
-    distanceTO2 Int?
+    distanceTO1 Int? // Пробег для первого ТО
+    distanceTO2 Int? // Пробег для второго ТО
 
     transports Transport[]
 }
@@ -45,12 +45,14 @@ model Transport {
     name String?
     gosNumber String
     fuel Int?
-    generalKM Int?
-    workingHours DateTime?
-    release DateTime?
-    pilotUser String?
-    osago DateTime?
-    techInspection DateTime?
+    generalKM Int? // Общий пробег
+    workingHours DateTime? // Время работы
+    release DateTime? // Дата выпуска
+    pilotUser String? // Водитель
+    osago DateTime? // Дата ОСАГО
+    techInspection DateTime? // Дата технического осмотра
+    nextTO1 Int? // Следующий пробег для ТО-1
+    nextTO2 Int? // Следующий пробег для ТО-2
 
     category Category @relation(fields: [categoryId], references: [id])
     categoryId Int
@@ -60,8 +62,62 @@ model Transport {
 
     createdAt DateTime @default(now())
     updateAt DateTime @updatedAt
+
+    MaintenanceRecord MaintenanceRecord[]
+
+    Notification Notification[]
+
+    isTO1Started   Boolean   @default(false) // Чек-кнопка о проведении ТО-1
+    isTO2Started   Boolean   @default(false) // Чек-кнопка о проведении ТО-2
 }
 
+// Уведомление о необходимости проведения ТО
+model Notification {
+    id           Int       @id @default(autoincrement())
+    transportId  Int
+    transport    Transport @relation(fields: [transportId], references: [id])
+    message      String
+    dueMileage   Int       // Пробег, на котором нужно ТО
+    isRead       Boolean   @default(false)
+
+    createdAt    DateTime @default(now())
+}
+
+// Запись о проведении ТО
+model MaintenanceRecord {
+    id          Int       @id @default(autoincrement())
+    transportId Int
+    transport   Transport @relation(fields: [transportId], references: [id])
+    date        DateTime  @default(now()) // Дата проведения ТО
+    description String?
+    cost        Float?
+    mileage     Int       // Пробег во время ТО
+    type        MaintenanceType // Тип ТО (ТО-1 или ТО-2)
+
+    createdAt   DateTime @default(now())
+
+    MaintenanceItem MaintenanceItem[]
+}
+// Работы, которые проводились во время ТО
+model MaintenanceItem {
+    id                 Int             @id @default(autoincrement())
+    maintenanceRecordId Int
+    maintenanceRecord  MaintenanceRecord @relation(fields: [maintenanceRecordId], references: [id])
+    
+    name              String           // Название работы (например, "Замена масла")
+    cost              Float?           // Стоимость данной работы
+    notes             String?          // Дополнительные заметки
+
+    createdAt         DateTime @default(now())
+}
+
+// Тип ТО (ТО-1 или ТО-2)
+enum MaintenanceType {
+    TO1
+    TO2
+}
+
+// Роль пользователя
 enum userRole {
     USER
     ADMIN

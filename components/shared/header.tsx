@@ -25,6 +25,7 @@ const breadcrumbTitles: { [key: string]: string } = {
   category: "Категории",
   create: "Создать",
   edit: "Редактировать",
+  technicalaintenance: "ТО1 и ТО2",
 };
 
 export const Header: React.FC<Props> = ({ className }) => {

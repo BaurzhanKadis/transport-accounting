@@ -6,10 +6,8 @@ export enum ApiRoutes {
   NEW_TRANSPORT = "transport/create",
   TRANSPORT = "transport/",
   STATUS = "status",
-
+  MAINTENANCE_RECORDS = "maintenanceRecord/",
   // INGREDIENTS = 'ingredients',
 }
 
-// export const TO1_INTERVAL = 5000;
-// export const TO2_INTERVAL = 10000;
 export const CRITICAL_DISTANCE = 1000;
