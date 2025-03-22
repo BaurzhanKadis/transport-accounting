@@ -2,7 +2,12 @@
 import React, { use, useState } from "react";
 // import { useParams } from "next/navigation";
 import { Api } from "@/services/api-client";
-import { Transport, MaintenanceRecord, Category } from "@prisma/client";
+import {
+  Transport,
+  MaintenanceRecord,
+  Category,
+  MaintenanceType,
+} from "@prisma/client";
 import {
   Table,
   TableBody,
@@ -14,6 +19,23 @@ import {
 } from "@/components/ui/table";
 import { LoaderCircle } from "lucide-react";
 import { useDebounce } from "react-use";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function MaintenanceDetails({
   params,
@@ -27,6 +49,13 @@ export default function MaintenanceDetails({
     MaintenanceRecord[]
   >([]);
   const [category, setCategory] = React.useState<Category | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    type: "TO1" as MaintenanceType,
+    mileage: "",
+    description: "",
+    cost: "",
+  });
 
   //   useDebounce(
   //     async () => {
@@ -69,8 +98,7 @@ export default function MaintenanceDetails({
           return;
         }
 
-        setTransport(transportData); // <-- Убедись, что useState<Transport | null>
-        console.log(transportData);
+        setTransport(transportData);
 
         const categories = await Api.categoryes.categoryes();
         const transportCategory = categories.find(
@@ -81,9 +109,9 @@ export default function MaintenanceDetails({
         const records = await Api.maintenanceRecords.getByTransportId(
           Number(id)
         );
-
-        setMaintenanceRecords(records);
-        // console.log(records);
+        if (Array.isArray(records)) {
+          setMaintenanceRecords(records);
+        }
       } catch (error) {
         console.error("Ошибка при загрузке данных:", error);
       }
@@ -92,36 +120,29 @@ export default function MaintenanceDetails({
     [id]
   );
 
-  //   React.useEffect(() => {
-  //     const fetchData = async () => {
-  //       try {
-  //         const transportData = await Api.transports.getTransport(Number(id));
-  //         setTransport(transportData);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const record = await Api.maintenanceRecords.createMaintenanceRecord({
+        transportId: Number(id),
+        type: formData.type,
+        mileage: Number(formData.mileage),
+        description: formData.description || undefined,
+        cost: formData.cost ? Number(formData.cost) : undefined,
+      });
 
-  //         const categories = await Api.categoryes.categoryes();
-  //         const transportCategory = categories.find(
-  //           (c) => c.id === transportData.categoryId
-  //         );
-  //         setCategory(transportCategory || null);
-
-  //         const records = await Api.maintenanceRecords.getByTransportId(
-  //           Number(id)
-  //         );
-  //         // Сортируем записи по дате, новые сверху
-  //         const sortedRecords = records.sort(
-  //           (a, b) =>
-  //             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  //         );
-  //         setMaintenanceRecords(sortedRecords);
-  //       } catch (error) {
-  //         console.error("Ошибка при загрузке данных:", error);
-  //       }
-  //     };
-
-  //     if (id) {
-  //       fetchData();
-  //     }
-  //   }, [id]);
+      setMaintenanceRecords((prev) => [record, ...prev]);
+      setIsDialogOpen(false);
+      setFormData({
+        type: "TO1" as MaintenanceType,
+        mileage: "",
+        description: "",
+        cost: "",
+      });
+    } catch (error) {
+      console.error("Ошибка при создании записи ТО:", error);
+    }
+  };
 
   if (!transport) {
     return (
@@ -134,9 +155,78 @@ export default function MaintenanceDetails({
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">
-        История технического обслуживания: {transport.name}
-      </h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">
+          История технического обслуживания: {transport?.name}
+        </h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>Добавить ТО</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                Добавить запись о техническом обслуживании
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="type">Тип ТО</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value: MaintenanceType) =>
+                    setFormData({ ...formData, type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TO1">ТО-1</SelectItem>
+                    <SelectItem value="TO2">ТО-2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mileage">Пробег (км)</Label>
+                <Input
+                  id="mileage"
+                  type="number"
+                  value={formData.mileage}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mileage: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Описание работ</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cost">Стоимость (₽)</Label>
+                <Input
+                  id="cost"
+                  type="number"
+                  value={formData.cost}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cost: e.target.value })
+                  }
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                Сохранить
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Информация о транспорте</h2>
