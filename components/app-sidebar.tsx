@@ -130,6 +130,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     accounting
                   </span>
                 </div>
+                <span className="text-sm font-medium text-slate-600 -mt-1">
+                  V 1.0
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
