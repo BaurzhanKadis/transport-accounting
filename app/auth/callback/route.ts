@@ -21,10 +21,21 @@ export async function GET(request: Request) {
         user_metadata: user.user_metadata,
       });
 
-      return NextResponse.redirect(requestUrl.origin);
+      // Определяем URL для перенаправления в зависимости от окружения
+      const redirectUrl =
+        process.env.NODE_ENV === "development"
+          ? `${requestUrl.origin}/`
+          : "https://transport-accounting.vercel.app/";
+
+      return NextResponse.redirect(redirectUrl);
     }
   }
 
   // Return the user to an error page with instructions
-  return NextResponse.redirect(`${requestUrl.origin}/error`);
+  const errorUrl =
+    process.env.NODE_ENV === "development"
+      ? `${requestUrl.origin}/error`
+      : "https://transport-accounting.vercel.app/error";
+
+  return NextResponse.redirect(errorUrl);
 }
