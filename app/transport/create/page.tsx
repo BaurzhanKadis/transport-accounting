@@ -5,8 +5,10 @@ import { Category, Status } from "@prisma/client";
 import React from "react";
 import toast from "react-hot-toast";
 import { useDebounce } from "react-use";
+import { useRouter } from "next/navigation";
 
 export default function CreateNewTransport() {
+  const router = useRouter();
   const [name, setName] = React.useState("");
   const [gosNumber, setGosnumber] = React.useState("");
   const [categoryId, setCategoryId] = React.useState(Number());
@@ -14,15 +16,21 @@ export default function CreateNewTransport() {
   const [allStatus, setAllStatus] = React.useState<Status[]>([]);
   const [allCategories, setAllCategories] = React.useState<Category[]>([]);
   const [generalKM, setGeneralKM] = React.useState(Number());
+
   const createT = async () => {
+    if (!name || !gosNumber || !categoryId || !statusId || !generalKM) {
+      toast.error("Пожалуйста, заполните все обязательные поля");
+      return;
+    }
+
     const data = { name, gosNumber, categoryId, statusId, generalKM };
     try {
-      const re = await Api.transports.newTransport(data);
+      await Api.transports.newTransport(data);
       toast.success("ТС Добавлено успешно");
-      return re;
+      router.push("/transport");
     } catch (error) {
+      console.error("Error creating transport:", error);
       toast.error("Ошибка добавления ТС");
-      console.log(error);
     }
   };
 
@@ -32,7 +40,8 @@ export default function CreateNewTransport() {
         setAllStatus(await Api.status.allStatus());
         setAllCategories(await Api.categoryes.categoryes());
       } catch (error) {
-        console.log(error);
+        console.error("Error fetching data:", error);
+        toast.error("Ошибка загрузки данных");
       }
     },
     150,

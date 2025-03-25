@@ -56,3 +56,23 @@ export const updateStatusTransport = async (
     await axiosInstance.patch(ApiRoutes.TRANSPORT + id + "/status", values)
   ).headers["Content-Type"];
 };
+
+// Обновление чека для ТО-1
+export const updateTO1 = async (
+  id: number,
+  values: { nextTO1: number; isTO1Started: boolean }
+) => {
+  return (
+    await axiosInstance.patch(ApiRoutes.TRANSPORT + id + "/updateTO1", values)
+  ).data;
+};
+
+// Обновление чека для ТО-2
+export const updateTO2 = async (
+  id: number,
+  values: { nextTO2: number; isTO2Started: boolean }
+) => {
+  return (
+    await axiosInstance.patch(ApiRoutes.TRANSPORT + id + "/updateTO2", values)
+  ).data;
+};

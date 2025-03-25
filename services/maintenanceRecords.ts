@@ -26,3 +26,11 @@ export const createMaintenanceRecord = async (data: {
     )
   ).data;
 };
+
+export const getAllMaintenanceRecords = async (): Promise<
+  MaintenanceRecord[]
+> => {
+  return (
+    await axiosInstance.get<MaintenanceRecord[]>(ApiRoutes.MAINTENANCE_RECORDS)
+  ).data;
+};

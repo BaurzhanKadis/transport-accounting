@@ -2,7 +2,7 @@
 import { Api } from "@/services/api-client";
 import React from "react";
 import { useDebounce } from "react-use";
-import { Category, Status, Transport } from "@prisma/client";
+import { Category, MaintenanceRecord, Status, Transport } from "@prisma/client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CirclePlus, Eye, SquarePen } from "lucide-react";
@@ -23,6 +23,9 @@ export default function TransportPage() {
   const [allTransports, setAllTransports] = React.useState<Transport[]>([]);
   const [allCategories, setAllCategories] = React.useState<Category[]>([]);
   const [allStatuses, setAllStatuses] = React.useState<Status[]>([]);
+  const [allMaintenanceRecords, setAllMaintenanceRecords] = React.useState<
+    MaintenanceRecord[]
+  >([]);
 
   useDebounce(
     async () => {
@@ -30,9 +33,12 @@ export default function TransportPage() {
         const response = await Api.transports.allTransport();
         const categories = await Api.categoryes.categoryes();
         const statuses = await Api.status.allStatus();
+        const maintenanceRecords =
+          await Api.maintenanceRecords.getAllMaintenanceRecords();
         setAllTransports(response);
         setAllCategories(categories);
         setAllStatuses(statuses);
+        setAllMaintenanceRecords(maintenanceRecords);
       } catch (error) {
         console.log(error);
       }
@@ -54,14 +60,35 @@ export default function TransportPage() {
     return km ? km.toLocaleString("ru-RU") : "0";
   };
 
+  // Функция для получения последней записи ТО-2 для транспорта
+  const getLastTO2Record = (transportId: number) => {
+    return allMaintenanceRecords
+      .filter(
+        (record) => record.transportId === transportId && record.type === "TO2"
+      )
+      .sort((a, b) => b.mileage - a.mileage)[0];
+  };
+
+  // Функция для расчета следующего ТО-2
   const calculateNextTO2 = (
+    transportId: number,
     currentKM: number | null,
     interval: number | null
-  ) => {
-    if (!currentKM || !interval) return 0;
-    const completedIntervals = Math.floor(currentKM / interval);
-    const nextTO2Point = (completedIntervals + 1) * interval;
-    return nextTO2Point - currentKM;
+  ): string => {
+    if (!currentKM || !interval) return "ТО2 не пройдено";
+
+    const lastTO2 = getLastTO2Record(transportId);
+    if (!lastTO2) {
+      return "ТО2 не пройдено";
+    }
+
+    const nextTO2Point = lastTO2.mileage + interval;
+    const remaining = nextTO2Point - currentKM;
+
+    if (remaining <= 0) {
+      return `Просрочено на ${formatKM(Math.abs(remaining))} км`;
+    }
+    return `${formatKM(remaining)} км`;
   };
 
   const calculateNextTO1 = (
@@ -71,14 +98,6 @@ export default function TransportPage() {
   ) => {
     if (!currentKM || !interval) return 0;
     if (!to2Interval || to2Interval <= interval) return 0;
-
-    // Сначала проверяем, нужно ли пройти ТО-2
-    const nextTO2 = calculateNextTO2(currentKM, to2Interval);
-
-    // Если подходит время ТО-2, то ТО-1 должно ждать
-    if (nextTO2 > 0 && nextTO2 <= interval) {
-      return 0;
-    }
 
     const completedIntervals = Math.floor(currentKM / interval);
     const nextTO1Point = (completedIntervals + 1) * interval;
@@ -123,17 +142,20 @@ export default function TransportPage() {
             const category = allCategories.find(
               (category) => category.id === item.categoryId
             );
-            const nextTO2 = calculateNextTO2(
-              item.generalKM,
-              category?.distanceTO2 ?? 0
-            );
             const nextTO1 = calculateNextTO1(
               item.generalKM,
               category?.distanceTO1 ?? 0,
               category?.distanceTO2 ?? 0
             );
             const isNearTO1 = nextTO1 <= CRITICAL_DISTANCE && nextTO1 > 0;
-            const isNearTO2 = nextTO2 <= CRITICAL_DISTANCE && nextTO2 > 0;
+
+            // Получаем статус ТО-2
+            const to2Status = calculateNextTO2(
+              item.id,
+              item.generalKM,
+              category?.distanceTO2 ?? null
+            );
+            const isOverdueTO2 = to2Status.includes("Просрочено");
 
             return (
               <TableRow key={item.id} className="bg-[#E6F1FD]">
@@ -162,10 +184,10 @@ export default function TransportPage() {
                 </TableCell>
                 <TableCell
                   className={
-                    isNearTO2 ? "text-red-500 font-medium" : "text-green-600"
+                    isOverdueTO2 ? "text-red-500 font-medium" : "text-green-600"
                   }
                 >
-                  {formatKM(nextTO2)} км
+                  {to2Status}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center">

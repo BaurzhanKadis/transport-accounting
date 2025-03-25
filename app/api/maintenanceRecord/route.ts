@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
       cost,
       mileage,
       type,
+      date: new Date(),
     },
   });
 

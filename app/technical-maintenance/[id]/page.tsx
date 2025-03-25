@@ -120,8 +120,39 @@ export default function MaintenanceDetails({
     [id]
   );
 
+  // Сбрасываем форму при закрытии диалога
+  const handleDialogChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (open && transport) {
+      // При открытии формы устанавливаем текущий пробег
+      setFormData((prev) => ({
+        ...prev,
+        mileage: String(transport.generalKM),
+      }));
+    } else {
+      // При закрытии очищаем форму
+      setFormData({
+        type: "TO1" as MaintenanceType,
+        mileage: "",
+        description: "",
+        cost: "",
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Проверяем, что введенный пробег не меньше текущего
+    if (
+      transport &&
+      transport.generalKM !== null &&
+      Number(formData.mileage) < transport.generalKM
+    ) {
+      alert("Пробег не может быть меньше текущего");
+      return;
+    }
+
     try {
       const record = await Api.maintenanceRecords.createMaintenanceRecord({
         transportId: Number(id),
@@ -130,6 +161,50 @@ export default function MaintenanceDetails({
         description: formData.description || undefined,
         cost: formData.cost ? Number(formData.cost) : undefined,
       });
+
+      // Обновляем пробег транспорта
+      if (transport) {
+        await Api.transports.updateTransport(Number(id), {
+          name: transport.name || "",
+          gosNumber: transport.gosNumber,
+          categoryId: transport.categoryId,
+          statusId: transport.statusId,
+          generalKM: Number(formData.mileage),
+        });
+        setTransport({
+          ...transport,
+          generalKM: Number(formData.mileage),
+        });
+
+        // Обновляем состояние ТО
+        if (formData.type === "TO1") {
+          await Api.transports.updateTO1(Number(id), {
+            nextTO1: Number(formData.mileage),
+            isTO1Started: true,
+          });
+          setTransport((prev) => ({
+            ...prev!,
+            nextTO1: Number(formData.mileage),
+            isTO1Started: true,
+          }));
+        } else if (formData.type === "TO2") {
+          await Api.transports.updateTO2(Number(id), {
+            nextTO2: Number(formData.mileage),
+            isTO2Started: true,
+          });
+          // При выполнении ТО-2 сбрасываем флаг ТО-1
+          await Api.transports.updateTO1(Number(id), {
+            nextTO1: Number(formData.mileage),
+            isTO1Started: false,
+          });
+          setTransport((prev) => ({
+            ...prev!,
+            nextTO2: Number(formData.mileage),
+            isTO2Started: true,
+            isTO1Started: false,
+          }));
+        }
+      }
 
       setMaintenanceRecords((prev) => [record, ...prev]);
       setIsDialogOpen(false);
@@ -142,6 +217,66 @@ export default function MaintenanceDetails({
     } catch (error) {
       console.error("Ошибка при создании записи ТО:", error);
     }
+  };
+
+  // Функция для получения последней записи определенного типа ТО
+  const getLastMaintenanceOfType = (type: MaintenanceType) => {
+    return maintenanceRecords
+      .filter((record) => record.type === type)
+      .sort((a, b) => b.mileage - a.mileage)[0];
+  };
+
+  // Функция для расчета следующего ТО определенного типа
+  const calculateNextMaintenance = (type: MaintenanceType): number | null => {
+    if (!transport || !category) return null;
+    if (transport.generalKM === null) return null;
+
+    const interval =
+      type === "TO1" ? category.distanceTO1 : category.distanceTO2;
+    if (!interval) return null;
+
+    if (type === "TO1") {
+      // Если ТО-1 уже начато и ТО-2 еще не выполнено, не показываем следующее ТО-1
+      if (transport.isTO1Started && !transport.isTO2Started) {
+        return null;
+      }
+
+      const lastTO2 = getLastMaintenanceOfType("TO2");
+
+      // Если есть ТО-2, считаем следующее ТО-1 от него
+      if (lastTO2) {
+        // Если isTO1Started false, возвращаем отрицательное значение для показа просрочки
+        if (!transport.isTO1Started) {
+          return lastTO2.mileage - transport.generalKM;
+        }
+        return lastTO2.mileage + interval;
+      }
+
+      // Если нет ни одного ТО, возвращаем null
+      return null;
+    } else {
+      // Для ТО-2 берем последнюю запись о ТО-2 из истории обслуживания
+      const lastTO2 = getLastMaintenanceOfType("TO2");
+      if (!lastTO2) {
+        return null; // Если нет записей, возвращаем null
+      }
+      return lastTO2.mileage + interval;
+    }
+  };
+
+  // Функция для определения остатка до следующего ТО
+  const getRemainingDistance = (type: MaintenanceType): number | null => {
+    if (!transport || transport.generalKM === null) return null;
+
+    const nextMaintenance = calculateNextMaintenance(type);
+    if (nextMaintenance === null) return null;
+
+    // Для ТО-1, если isTO1Started false, возвращаем значение как есть (оно уже отрицательное)
+    if (type === "TO1" && !transport.isTO1Started) {
+      return nextMaintenance;
+    }
+
+    return nextMaintenance - transport.generalKM;
   };
 
   if (!transport) {
@@ -159,7 +294,7 @@ export default function MaintenanceDetails({
         <h1 className="text-2xl font-bold text-slate-800">
           История технического обслуживания: {transport?.name}
         </h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button>Добавить ТО</Button>
           </DialogTrigger>
@@ -193,11 +328,17 @@ export default function MaintenanceDetails({
                   id="mileage"
                   type="number"
                   value={formData.mileage}
+                  min={transport?.generalKM || 0}
                   onChange={(e) =>
                     setFormData({ ...formData, mileage: e.target.value })
                   }
                   required
                 />
+                {transport?.generalKM && (
+                  <p className="text-sm text-gray-500">
+                    Текущий пробег: {transport.generalKM.toLocaleString()} км
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Описание работ</Label>
@@ -251,6 +392,40 @@ export default function MaintenanceDetails({
               ТО-1: {category?.distanceTO1?.toLocaleString() || "-"} км
               <br />
               ТО-2: {category?.distanceTO2?.toLocaleString() || "-"} км
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-gray-600">До следующего ТО-1:</p>
+            <p className="font-medium">
+              {(() => {
+                const lastTO2 = getLastMaintenanceOfType("TO2");
+                if (!lastTO2) {
+                  return "ТО1 не пройдено";
+                }
+                const remaining = getRemainingDistance("TO1");
+                if (remaining === null) return "-";
+                return remaining <= 0
+                  ? `Просрочено на ${Math.abs(remaining).toLocaleString()} км`
+                  : `${remaining.toLocaleString()} км`;
+              })()}
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-600">До следующего ТО-2:</p>
+            <p className="font-medium">
+              {(() => {
+                const lastTO2 = getLastMaintenanceOfType("TO2");
+                if (!lastTO2) {
+                  return "ТО2 не пройдено";
+                }
+                const remaining = getRemainingDistance("TO2");
+                if (remaining === null) return "-";
+                return remaining <= 0
+                  ? `Просрочено на ${Math.abs(remaining).toLocaleString()} км`
+                  : `${remaining.toLocaleString()} км`;
+              })()}
             </p>
           </div>
         </div>
