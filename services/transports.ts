@@ -19,6 +19,7 @@ export const getTransport = async (id: number): Promise<Transport> => {
 };
 
 export const newTransport = async (values: {
+  userId: string;
   name: string;
   gosNumber: string;
   categoryId: number;

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   SidebarMenu,
@@ -19,7 +20,8 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { useMenuItem } from "@/store/menuItem";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { NavUser } from "./shared/nav-user";
 
 // This is sample data.
 const data = {
@@ -61,10 +63,23 @@ const data = {
   ],
 };
 
+interface UserData {
+  id: string;
+  email: string;
+  metadata: {
+    full_name?: string;
+    avatar_url?: string;
+  };
+  createdAt: string;
+  lastSignIn: string;
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const activeId = useMenuItem((state) => state.activeId);
   const setActiveId = useMenuItem((state) => state.setActiveId);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  // const [error, setError] = useState<string | null>(null);
   const { isMobile, setOpenMobile } = useSidebar();
 
   const handleLinkClick = (id: number) => {
@@ -100,12 +115,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
       return 1;
     };
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch("/api/user/me");
+        if (!response.ok) {
+          throw new Error("Failed to fetch user data");
+        }
+        const data = await response.json();
+        setUserData(data);
+      } catch (err) {
+        // setError(err instanceof Error ? err.message : "An error occurred");
+        console.log(err);
+      }
+    };
 
+    fetchUserData();
     setActiveId(findActiveId());
   }, [pathname, setActiveId]);
 
   return (
-    <Sidebar {...props}>
+    <Sidebar {...props} className="max-h-screen">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -185,6 +214,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={userData} />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

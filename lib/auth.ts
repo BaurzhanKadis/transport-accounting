@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/prisma/prisma-client";
 import { User } from "@prisma/client";
 
 interface GoogleUser {
