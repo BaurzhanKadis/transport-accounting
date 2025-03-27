@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -77,6 +77,7 @@ interface UserData {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const router = useRouter();
   const activeId = useMenuItem((state) => state.activeId);
   const setActiveId = useMenuItem((state) => state.setActiveId);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -148,6 +149,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     fetchUserData();
     setActiveId(findActiveId());
   }, [pathname, setActiveId]);
+
+  const handleLogout = async () => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error("Error logging out:", error);
+        return;
+      }
+
+      setUserData(null);
+      router.push("/login");
+    } catch (err) {
+      console.error("Error during logout:", err);
+    }
+  };
 
   return (
     <Sidebar {...props} className="max-h-screen">
@@ -231,7 +249,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={userData} />
+        <NavUser user={userData} onLogout={handleLogout} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -37,7 +37,12 @@ interface User {
   lastSignIn: string;
 }
 
-export function NavUser({ user }: { user: User | null }) {
+interface NavUserProps {
+  user: User | null;
+  onLogout: () => Promise<void>;
+}
+
+export function NavUser({ user, onLogout }: NavUserProps) {
   const { isMobile } = useSidebar();
 
   if (!user) {
@@ -140,7 +145,7 @@ export function NavUser({ user }: { user: User | null }) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={onLogout}>
               <LogOut />
               Log out
             </DropdownMenuItem>

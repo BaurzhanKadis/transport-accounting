@@ -1,6 +1,6 @@
 "use client";
 import { Api } from "@/services/api-client";
-import React from "react";
+import React, { useEffect } from "react";
 import { useDebounce } from "react-use";
 import { Category, MaintenanceRecord, Status, Transport } from "@prisma/client";
 import Link from "next/link";
@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import useAuthStore from "@/store/authUser";
 
 export default function TransportPage() {
   const [allTransports, setAllTransports] = React.useState<Transport[]>([]);
@@ -26,7 +27,8 @@ export default function TransportPage() {
   const [allMaintenanceRecords, setAllMaintenanceRecords] = React.useState<
     MaintenanceRecord[]
   >([]);
-
+  // const { user } = useAuthStore();
+  // console.log(user);
   useDebounce(
     async () => {
       try {
@@ -46,6 +48,11 @@ export default function TransportPage() {
     250,
     []
   );
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    console.log(user);
+  }, [user]);
 
   const deleteItem = async (id: number) => {
     try {
