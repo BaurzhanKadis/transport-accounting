@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useMenuItem } from "@/store/menuItem";
 import { useEffect, useState } from "react";
 import { NavUser } from "./shared/nav-user";
+import { createClient } from "@/lib/supabase/client";
 
 // This is sample data.
 const data = {
@@ -79,7 +80,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const activeId = useMenuItem((state) => state.activeId);
   const setActiveId = useMenuItem((state) => state.setActiveId);
   const [userData, setUserData] = useState<UserData | null>(null);
-  // const [error, setError] = useState<string | null>(null);
   const { isMobile, setOpenMobile } = useSidebar();
 
   const handleLinkClick = (id: number) => {
@@ -115,17 +115,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
       return 1;
     };
+
     const fetchUserData = async () => {
       try {
-        const response = await fetch("/api/user/me");
-        if (!response.ok) {
-          throw new Error("Failed to fetch user data");
+        const supabase = createClient();
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error) {
+          console.error("Error getting user:", error);
+          return;
         }
-        const data = await response.json();
-        setUserData(data);
+
+        if (!user) {
+          return;
+        }
+
+        setUserData({
+          id: user.id,
+          email: user.email!,
+          metadata: user.user_metadata,
+          createdAt: user.created_at,
+          lastSignIn: user.last_sign_in_at || new Date().toISOString(),
+        });
       } catch (err) {
-        // setError(err instanceof Error ? err.message : "An error occurred");
-        console.log(err);
+        console.error("Error fetching user data:", err);
       }
     };
 
