@@ -25,7 +25,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-
+import Link from "next/link";
 interface User {
   id: string;
   email: string;
@@ -132,8 +132,10 @@ export function NavUser({ user, onLogout }: NavUserProps) {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <BadgeCheck />
-                Account
+                <Link href="/profile" className="flex items-center gap-2">
+                  <BadgeCheck />
+                  Профиль
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard />

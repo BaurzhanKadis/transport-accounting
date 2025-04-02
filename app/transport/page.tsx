@@ -21,7 +21,9 @@ import {
 import useAuthStore from "@/store/authUser";
 
 export default function TransportPage() {
-  const [allTransports, setAllTransports] = React.useState<Transport[]>([]);
+  const [myTransportsData, setMyTransportsData] = React.useState<Transport[]>(
+    []
+  );
   const [allCategories, setAllCategories] = React.useState<Category[]>([]);
   const [allStatuses, setAllStatuses] = React.useState<Status[]>([]);
   const [allMaintenanceRecords, setAllMaintenanceRecords] = React.useState<
@@ -32,12 +34,13 @@ export default function TransportPage() {
   useDebounce(
     async () => {
       try {
-        const response = await Api.transports.allTransport();
+        const transportsResponse = await Api.transports.myTransports();
         const categories = await Api.categoryes.categoryes();
         const statuses = await Api.status.allStatus();
         const maintenanceRecords =
           await Api.maintenanceRecords.getAllMaintenanceRecords();
-        setAllTransports(response);
+
+        setMyTransportsData(transportsResponse);
         setAllCategories(categories);
         setAllStatuses(statuses);
         setAllMaintenanceRecords(maintenanceRecords);
@@ -56,8 +59,9 @@ export default function TransportPage() {
 
   const deleteItem = async (id: number) => {
     try {
-      const response = await Api.transports.deleteTransport(id);
-      setAllTransports(response);
+      await Api.transports.deleteTransport(id);
+      const updatedTransports = await Api.transports.myTransports();
+      setMyTransportsData(updatedTransports);
     } catch (error) {
       console.log(error);
     }
@@ -145,7 +149,7 @@ export default function TransportPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {allTransports.map((item) => {
+          {myTransportsData.map((item) => {
             const category = allCategories.find(
               (category) => category.id === item.categoryId
             );

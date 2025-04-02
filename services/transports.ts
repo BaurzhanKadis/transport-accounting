@@ -14,6 +14,10 @@ export const allTransport = async (): Promise<Transport[]> => {
   return (await axiosInstance.get<Transport[]>(ApiRoutes.ALL_PRODUCTS)).data;
 };
 
+export const myTransports = async (): Promise<Transport[]> => {
+  return (await axiosInstance.get<Transport[]>(ApiRoutes.MY_TRANSPORT)).data;
+};
+
 export const getTransport = async (id: number): Promise<Transport> => {
   return (await axiosInstance.get<Transport>(ApiRoutes.TRANSPORT + id)).data;
 };

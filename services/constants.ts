@@ -1,6 +1,7 @@
 export enum ApiRoutes {
   SEARCH_PRODUCTS = "transport/search",
   ALL_PRODUCTS = "transport/all",
+  MY_TRANSPORT = "transport/my",
   TYPES = "type",
   CATEGORYES = "category",
   NEW_TRANSPORT = "transport/create",
