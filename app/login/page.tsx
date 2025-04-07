@@ -24,11 +24,9 @@ function LoginForm() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithGoogle();
+      const result = await signInWithGoogle(redirectTo);
       if (result?.url) {
-        const url = new URL(result.url);
-        url.searchParams.set("redirectTo", redirectTo);
-        window.location.href = url.toString();
+        window.location.href = result.url;
       }
     } catch (error) {
       console.error("Error signing in with Google:", error);

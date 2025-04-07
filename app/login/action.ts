@@ -49,13 +49,21 @@ export async function signup(formData: FormData) {
   redirect(redirectTo);
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(redirectTo?: string) {
   const supabase = await createClient();
+
+  // URL для перенаправления после успешной аутентификации
+  const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+
+  // Если передан redirectTo, добавляем его к URL для обратного вызова
+  const finalCallbackUrl = redirectTo
+    ? `${callbackUrl}?redirectTo=${encodeURIComponent(redirectTo)}`
+    : callbackUrl;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      redirectTo: finalCallbackUrl,
       queryParams: {
         access_type: "offline",
         prompt: "consent",

@@ -6,7 +6,7 @@ const PUBLIC_PATHS = [
   "/login", // Страница входа
   "/auth", // Пути для обработки аутентификации
   "/api/auth", // API эндпоинты для аутентификации
-  "/", // Главная страница (можно удалить, если она должна быть защищена)
+  // "/", // Главная страница (удалена, теперь требует авторизации)
 ];
 
 // Пути, всегда разрешенные для всех (статические файлы, иконки, etc.)
@@ -70,7 +70,13 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/login";
 
     // Сохраняем исходный URL как параметр запроса для редиректа после входа
-    url.searchParams.set("redirectTo", pathname);
+    // Не перезаписываем существующий redirectTo, если он уже есть
+    if (!url.searchParams.has("redirectTo") && pathname !== "/") {
+      url.searchParams.set("redirectTo", pathname);
+    } else if (pathname === "/") {
+      // Если пытались получить доступ к главной странице, перенаправим туда же после входа
+      url.searchParams.set("redirectTo", "/");
+    }
 
     // Перенаправляем на страницу входа
     return NextResponse.redirect(url);
