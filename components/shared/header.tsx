@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import { SearchInput } from "./search-input";
 import { usePathname } from "next/navigation";
@@ -46,7 +46,8 @@ const breadcrumbTitles: { [key: string]: string } = {
   reports: "Отчеты",
 };
 
-export const Header: React.FC<Props> = ({ className }) => {
+// Компонент с хуком usePathname, обернутый в Suspense внешне
+function HeaderContent({ className }: Props) {
   const pathname = usePathname();
   const paths = pathname.split("/").filter(Boolean);
   const { fetchUser } = useAuthStore();
@@ -131,5 +132,33 @@ export const Header: React.FC<Props> = ({ className }) => {
       </div>
       <SearchInput />
     </header>
+  );
+}
+
+// Заглушка для отображения во время загрузки
+function HeaderSkeleton({ className }: Props) {
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b justify-between px-3 bg-background",
+        className
+      )}
+    >
+      <div className="flex items-center gap-2 overflow-hidden">
+        <div className="w-6 h-6 bg-gray-200 rounded animate-pulse"></div>
+        <Separator orientation="vertical" className="mr-2 h-4" />
+        <div className="flex-1 h-6 bg-gray-200 rounded animate-pulse"></div>
+      </div>
+      <div className="w-40 h-8 bg-gray-200 rounded animate-pulse"></div>
+    </header>
+  );
+}
+
+// Обертка с Suspense
+export const Header: React.FC<Props> = (props) => {
+  return (
+    <Suspense fallback={<HeaderSkeleton {...props} />}>
+      <HeaderContent {...props} />
+    </Suspense>
   );
 };

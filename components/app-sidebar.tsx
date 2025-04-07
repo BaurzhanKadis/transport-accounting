@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { useMenuItem } from "@/store/menuItem";
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { NavUser } from "./shared/nav-user";
 import useAuthStore from "@/store/authUser";
 import { toast } from "react-hot-toast";
@@ -65,7 +65,8 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+// Компонент содержимого сайдбара, использующий usePathname и useRouter
+function AppSidebarContent({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const router = useRouter();
   const activeId = useMenuItem((state) => state.activeId);
@@ -244,5 +245,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
+  );
+}
+
+// Заглушка для отображения во время загрузки
+function AppSidebarSkeleton(props: React.ComponentProps<typeof Sidebar>) {
+  return (
+    <Sidebar {...props} className="max-h-screen">
+      <SidebarHeader>
+        <div className="p-4">
+          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <div className="p-4 space-y-4">
+          <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-8 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </SidebarContent>
+      <SidebarFooter>
+        <div className="p-4">
+          <div className="h-10 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  );
+}
+
+// Экспортируемый компонент с Suspense
+export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
+  return (
+    <Suspense fallback={<AppSidebarSkeleton {...props} />}>
+      <AppSidebarContent {...props} />
+    </Suspense>
   );
 }
