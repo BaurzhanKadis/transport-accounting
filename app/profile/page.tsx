@@ -1,42 +1,67 @@
 "use client";
 import { useEffect, useState } from "react";
-
-interface UserData {
-  id: string;
-  email: string;
-  metadata: {
-    full_name?: string;
-    avatar_url?: string;
-  };
-  createdAt: string;
-  lastSignIn: string;
-}
+import useAuthStore from "@/store/authUser";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "react-hot-toast";
 
 export default function ProfilePage() {
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, fetchUser, isLoading, error } = useAuthStore();
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const loadUserData = async () => {
+      setIsPageLoading(true);
+
       try {
-        const response = await fetch("/api/user/me");
-        if (!response.ok) {
-          throw new Error("Failed to fetch user data");
+        // Проверяем текущую сессию напрямую
+        const supabase = createClient();
+        const { data } = await supabase.auth.getSession();
+
+        console.log("ProfilePage: Checking session", {
+          hasSession: !!data.session,
+          sessionExpires: data.session?.expires_at
+            ? new Date(data.session.expires_at * 1000).toISOString()
+            : null,
+        });
+
+        if (!data.session) {
+          console.log("ProfilePage: No session found, redirecting");
+          toast.error("Сессия не найдена. Пожалуйста, войдите в систему.");
+          // Даем toast время на отображение
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 1500);
+          return;
         }
-        const data = await response.json();
-        setUserData(data);
+
+        // Принудительно запрашиваем данные пользователя
+        console.log("ProfilePage: Fetching user data");
+        const userData = await fetchUser();
+        console.log("ProfilePage: User data fetched", { found: !!userData });
+
+        if (!userData) {
+          console.error(
+            "ProfilePage: User data not found despite valid session"
+          );
+          toast.error("Не удалось загрузить данные пользователя");
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        console.error("ProfilePage: Error loading user data", err);
+        toast.error(
+          `Ошибка загрузки данных: ${
+            err instanceof Error ? err.message : "Неизвестная ошибка"
+          }`
+        );
       } finally {
-        setLoading(false);
+        setIsPageLoading(false);
       }
     };
 
-    fetchUserData();
+    loadUserData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) {
+  if (isPageLoading || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-xl">Загрузка...</div>
@@ -47,15 +72,21 @@ export default function ProfilePage() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-red-500">Ошибка: {error}</div>
+        <div className="text-xl text-red-500">Ошибка: {error.message}</div>
       </div>
     );
   }
 
-  if (!userData) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl">Пользователь не найден</div>
+        <div className="text-xl">
+          Пользователь не найден. Пожалуйста,{" "}
+          <a href="/login" className="text-blue-500 underline">
+            войдите в систему
+          </a>
+          .
+        </div>
       </div>
     );
   }
@@ -68,18 +99,18 @@ export default function ProfilePage() {
         <div className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-700">ID</h2>
-            <p className="text-gray-600">{userData.id}</p>
+            <p className="text-gray-600">{user.id}</p>
           </div>
 
           <div>
             <h2 className="text-lg font-semibold text-gray-700">Email</h2>
-            <p className="text-gray-600">{userData.email}</p>
+            <p className="text-gray-600">{user.email}</p>
           </div>
 
-          {userData.metadata.full_name && (
+          {user.fullName && (
             <div>
               <h2 className="text-lg font-semibold text-gray-700">Имя</h2>
-              <p className="text-gray-600">{userData.metadata.full_name}</p>
+              <p className="text-gray-600">{user.fullName}</p>
             </div>
           )}
 
@@ -87,19 +118,30 @@ export default function ProfilePage() {
             <h2 className="text-lg font-semibold text-gray-700">
               Дата регистрации
             </h2>
-            <p className="text-gray-600">
-              {new Date(userData.createdAt).toLocaleString()}
-            </p>
+            <p className="text-gray-600">{user.createdAt.toLocaleString()}</p>
           </div>
 
-          <div>
-            <h2 className="text-lg font-semibold text-gray-700">
-              Последний вход
-            </h2>
-            <p className="text-gray-600">
-              {new Date(userData.lastSignIn).toLocaleString()}
-            </p>
-          </div>
+          {user.lastSignIn && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700">
+                Последний вход
+              </h2>
+              <p className="text-gray-600">
+                {user.lastSignIn.toLocaleString()}
+              </p>
+            </div>
+          )}
+
+          {user.avatarUrl && (
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700">Аватар</h2>
+              <img
+                src={user.avatarUrl}
+                alt="Аватар пользователя"
+                className="w-24 h-24 rounded-full mt-2"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

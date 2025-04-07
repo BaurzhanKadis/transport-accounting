@@ -26,24 +26,25 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
-interface User {
-  id: string;
-  email: string;
-  metadata: {
-    full_name?: string;
-    avatar_url?: string;
-  };
-  createdAt: string;
-  lastSignIn: string;
-}
+import { UserData } from "@/store/authUser";
+import { useEffect, useState } from "react";
 
 interface NavUserProps {
-  user: User | null;
+  user: UserData | null;
   onLogout: () => Promise<void>;
 }
 
 export function NavUser({ user, onLogout }: NavUserProps) {
   const { isMobile } = useSidebar();
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Для отладки - логируем состояние пользователя
+  useEffect(() => {
+    console.log(
+      "NavUser: user state changed",
+      user ? `User: ${user.email}` : "No user"
+    );
+  }, [user]);
 
   if (!user) {
     return (
@@ -54,7 +55,8 @@ export function NavUser({ user, onLogout }: NavUserProps) {
               <AvatarFallback className="rounded-lg">?</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">Загрузка...</span>
+              <span className="truncate font-semibold">Не авторизован</span>
+              <span className="truncate text-xs">Войдите в систему</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -62,18 +64,47 @@ export function NavUser({ user, onLogout }: NavUserProps) {
     );
   }
 
-  const userInitials = user.metadata.full_name
-    ? user.metadata.full_name
+  // Проверяем, что у пользователя есть свойство email
+  if (!user.email) {
+    console.error("NavUser: User object is missing email property", user);
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg">
+            <Avatar className="h-8 w-8 rounded-lg">
+              <AvatarFallback className="rounded-lg">!</AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">Ошибка данных</span>
+              <span className="truncate text-xs">
+                Некорректные данные пользователя
+              </span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  // Безопасное создание инициалов
+  const userInitials = user.fullName
+    ? user.fullName
         .split(" ")
-        .map((n) => n[0])
+        .map((n) => (n && n.length > 0 ? n[0] : ""))
         .join("")
         .toUpperCase()
-    : user.email[0].toUpperCase();
+    : user.email
+    ? user.email[0].toUpperCase()
+    : "U";
+
+  const handleToggle = () => {
+    setIsOpen(!isOpen);
+  };
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
+        <DropdownMenu open={isOpen} onOpenChange={handleToggle}>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
@@ -81,8 +112,8 @@ export function NavUser({ user, onLogout }: NavUserProps) {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
-                  src={user.metadata.avatar_url}
-                  alt={user.metadata.full_name || user.email}
+                  src={user.avatarUrl}
+                  alt={user.fullName || user.email}
                 />
                 <AvatarFallback className="rounded-lg">
                   {userInitials}
@@ -90,7 +121,7 @@ export function NavUser({ user, onLogout }: NavUserProps) {
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
-                  {user.metadata.full_name || user.email}
+                  {user.fullName || user.email}
                 </span>
                 <span className="truncate text-xs">{user.email}</span>
               </div>
@@ -107,8 +138,8 @@ export function NavUser({ user, onLogout }: NavUserProps) {
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage
-                    src={user.metadata.avatar_url}
-                    alt={user.metadata.full_name || user.email}
+                    src={user.avatarUrl}
+                    alt={user.fullName || user.email}
                   />
                   <AvatarFallback className="rounded-lg">
                     {userInitials}
@@ -116,7 +147,7 @@ export function NavUser({ user, onLogout }: NavUserProps) {
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">
-                    {user.metadata.full_name || user.email}
+                    {user.fullName || user.email}
                   </span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
@@ -125,31 +156,31 @@ export function NavUser({ user, onLogout }: NavUserProps) {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
+                <Sparkles className="mr-2 h-4 w-4" />
+                <span>Upgrade to Pro</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Link href="/profile" className="flex items-center gap-2">
-                  <BadgeCheck />
-                  Профиль
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="flex items-center">
+                  <BadgeCheck className="mr-2 h-4 w-4" />
+                  <span>Профиль</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <CreditCard />
-                Billing
+                <CreditCard className="mr-2 h-4 w-4" />
+                <span>Billing</span>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Bell />
-                Notifications
+                <Bell className="mr-2 h-4 w-4" />
+                <span>Notifications</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onLogout}>
-              <LogOut />
-              Log out
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

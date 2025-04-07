@@ -8,6 +8,8 @@ export async function GET(request: Request) {
 
   try {
     const code = requestUrl.searchParams.get("code");
+    // Получаем значение redirectTo из URL
+    const redirectTo = requestUrl.searchParams.get("redirectTo") || "/";
 
     if (code) {
       const supabase = await createClient();
@@ -38,7 +40,12 @@ export async function GET(request: Request) {
           });
         }
 
-        return NextResponse.redirect(requestUrl.origin);
+        // Перенаправляем на страницу, указанную в redirectTo, или на главную страницу
+        return NextResponse.redirect(
+          redirectTo.startsWith("http")
+            ? redirectTo
+            : `${requestUrl.origin}${redirectTo}`
+        );
       }
     }
 

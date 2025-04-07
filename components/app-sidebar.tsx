@@ -20,9 +20,10 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { useMenuItem } from "@/store/menuItem";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { NavUser } from "./shared/nav-user";
-import { createClient } from "@/lib/supabase/client";
+import useAuthStore from "@/store/authUser";
+import { toast } from "react-hot-toast";
 
 // This is sample data.
 const data = {
@@ -64,24 +65,31 @@ const data = {
   ],
 };
 
-interface UserData {
-  id: string;
-  email: string;
-  metadata: {
-    full_name?: string;
-    avatar_url?: string;
-  };
-  createdAt: string;
-  lastSignIn: string;
-}
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const router = useRouter();
   const activeId = useMenuItem((state) => state.activeId);
   const setActiveId = useMenuItem((state) => state.setActiveId);
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const { user, logout, isLoading, error, resetError } = useAuthStore();
   const { isMobile, setOpenMobile } = useSidebar();
+
+  // Отслеживаем ошибки авторизации
+  useEffect(() => {
+    if (error) {
+      console.error("AppSidebar: Auth error detected", error);
+      toast.error(`Ошибка авторизации: ${error.message}`);
+      resetError();
+    }
+  }, [error, resetError]);
+
+  // Отладка состояния пользователя
+  useEffect(() => {
+    console.log("AppSidebar: Auth state changed", {
+      isLoading,
+      isAuthenticated: !!user,
+      user: user ? `${user.email} (${user.id})` : null,
+    });
+  }, [user, isLoading]);
 
   const handleLinkClick = (id: number) => {
     setActiveId(id);
@@ -117,53 +125,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       return 1;
     };
 
-    const fetchUserData = async () => {
-      try {
-        const supabase = createClient();
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
-
-        if (error) {
-          console.error("Error getting user:", error);
-          return;
-        }
-
-        if (!user) {
-          return;
-        }
-
-        setUserData({
-          id: user.id,
-          email: user.email!,
-          metadata: user.user_metadata,
-          createdAt: user.created_at,
-          lastSignIn: user.last_sign_in_at || new Date().toISOString(),
-        });
-      } catch (err) {
-        console.error("Error fetching user data:", err);
-      }
-    };
-
-    fetchUserData();
     setActiveId(findActiveId());
   }, [pathname, setActiveId]);
 
   const handleLogout = async () => {
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.error("Error logging out:", error);
-        return;
-      }
-
-      setUserData(null);
-      router.push("/login");
+      console.log("AppSidebar: Initiating logout");
+      toast.promise(
+        logout().then(() => {
+          router.push("/login");
+        }),
+        {
+          loading: "Выход из системы...",
+          success: "Выход выполнен успешно",
+          error: "Ошибка при выходе из системы",
+        }
+      );
     } catch (err) {
-      console.error("Error during logout:", err);
+      console.error("AppSidebar: Error during logout:", err);
+      toast.error(
+        "Ошибка при выходе: " +
+          (err instanceof Error ? err.message : "Неизвестная ошибка")
+      );
     }
   };
 
@@ -249,7 +232,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={userData} onLogout={handleLogout} />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            {isLoading ? (
+              <div className="text-center p-4">Загрузка...</div>
+            ) : (
+              <NavUser user={user} onLogout={handleLogout} />
+            )}
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

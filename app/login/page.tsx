@@ -14,13 +14,19 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Chrome } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/";
+
   const handleGoogleSignIn = async () => {
     try {
       const result = await signInWithGoogle();
       if (result?.url) {
-        window.location.href = result.url;
+        const url = new URL(result.url);
+        url.searchParams.set("redirectTo", redirectTo);
+        window.location.href = url.toString();
       }
     } catch (error) {
       console.error("Error signing in with Google:", error);
@@ -54,6 +60,7 @@ export default function LoginPage() {
               <Label htmlFor="password">Пароль</Label>
               <Input id="password" name="password" type="password" required />
             </div>
+            <input type="hidden" name="redirectTo" value={redirectTo} />
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">

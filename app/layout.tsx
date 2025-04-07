@@ -7,6 +7,9 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "react-hot-toast";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Header } from "@/components/shared";
+import { AuthProvider } from "@/components/providers/auth-provider";
+import { AuthDebug } from "@/components/shared/auth-debug";
+import { CacheDebug } from "@/components/shared/cache-debug";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -61,16 +64,24 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            <div className="flex flex-col min-h-svh">
-              <Header />
-              <main className="flex-1 p-4">{children}</main>
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
-        <Toaster />
+        <AuthProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <div className="flex flex-col min-h-svh">
+                <Header />
+                <main className="flex-1 p-4">{children}</main>
+              </div>
+            </SidebarInset>
+          </SidebarProvider>
+          <Toaster />
+          {process.env.NODE_ENV !== "production" && (
+            <>
+              <AuthDebug />
+              <CacheDebug />
+            </>
+          )}
+        </AuthProvider>
       </body>
     </html>
   );

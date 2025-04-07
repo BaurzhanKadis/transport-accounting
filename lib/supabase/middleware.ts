@@ -1,6 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Пути, доступные без авторизации
+const PUBLIC_PATHS = [
+  "/login", // Страница входа
+  "/auth", // Пути для обработки аутентификации
+  "/api/auth", // API эндпоинты для аутентификации
+  "/", // Главная страница (можно удалить, если она должна быть защищена)
+];
+
+// Пути, всегда разрешенные для всех (статические файлы, иконки, etc.)
+const ALWAYS_ALLOWED_PATHS = ["/_next", "/favicon.ico", "/icons", "/images"];
+
+// Проверяет, является ли путь публичным
+function isPublicPath(pathname: string): boolean {
+  return (
+    PUBLIC_PATHS.some((path) => pathname.startsWith(path)) ||
+    ALWAYS_ALLOWED_PATHS.some((path) => pathname.startsWith(path))
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -39,14 +58,21 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  // Текущий путь
+  const { pathname } = request.nextUrl;
+
+  // Если пользователь не авторизован и путь не является публичным
+  if (!user && !isPublicPath(pathname)) {
+    console.log(`Unauthorized access to ${pathname}, redirecting to login`);
+
+    // Клонируем URL для редиректа
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+
+    // Сохраняем исходный URL как параметр запроса для редиректа после входа
+    url.searchParams.set("redirectTo", pathname);
+
+    // Перенаправляем на страницу входа
     return NextResponse.redirect(url);
   }
 
